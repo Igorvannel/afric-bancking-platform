@@ -1,4 +1,4 @@
-# 🏦 Afric Banking Platform
+# 🏦 @fric Banking Platform
 
 > Plateforme bancaire microservices construite avec **Java 21 + Spring Cloud 2023 + MongoDB Replica Set**
 

@@ -1,0 +1,797 @@
+{
+  "info": {
+    "name": "Afric Banking Platform",
+    "description": "Collection Postman complète pour la plateforme bancaire @fric Remit.\n\n## Workflow recommandé :\n1. **Register** → token généré automatiquement dans les variables\n2. **Login** → rafraîchit le token si nécessaire\n3. **Get User** → profil de l'utilisateur connecté\n4. **Credit** → créditer le compte\n5. **Debit** → débiter le compte\n6. **Debit Insuffisant** → tester le cas d'erreur\n\n> Le token JWT est automatiquement stocké après Register/Login via les scripts de test.",
+    "_postman_id": "afric-banking-collection-v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "URL du Gateway (point d'entrée unique)"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT Access Token (rempli automatiquement après login/register)"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT Refresh Token (rempli automatiquement après login/register)"
+    },
+    {
+      "key": "user_email",
+      "value": "jean.hugues@afric.cm",
+      "type": "string",
+      "description": "Email de test"
+    },
+    {
+      "key": "user_password",
+      "value": "SecurePass123!",
+      "type": "string",
+      "description": "Mot de passe de test"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth Service",
+      "description": "Endpoints d'authentification — routes NON sécurisées",
+      "item": [
+        {
+          "name": "Register — Créer un compte",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// ─── Vérification du statut ───────────────────────────────",
+                  "pm.test('Status 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "// ─── Vérification de la structure ─────────────────────────",
+                  "pm.test('Response contient accessToken', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('accessToken');",
+                  "    pm.expect(json).to.have.property('refreshToken');",
+                  "    pm.expect(json).to.have.property('tokenType', 'Bearer');",
+                  "    pm.expect(json).to.have.property('user');",
+                  "});",
+                  "",
+                  "pm.test('User contient id, name, email', function () {",
+                  "    const user = pm.response.json().user;",
+                  "    pm.expect(user).to.have.property('id');",
+                  "    pm.expect(user).to.have.property('name');",
+                  "    pm.expect(user).to.have.property('email');",
+                  "    pm.expect(user).to.not.have.property('password');",
+                  "});",
+                  "",
+                  "// ─── Sauvegarde automatique du token ──────────────────────",
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', json.accessToken);",
+                  "    pm.collectionVariables.set('refresh_token', json.refreshToken);",
+                  "    console.log('✅ Token sauvegardé automatiquement');",
+                  "    console.log('👤 User ID :', json.user.id);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Générer un email unique pour éviter les conflits lors de tests répétés",
+                  "const timestamp = Date.now();",
+                  "const email = `test.${timestamp}@afric.cm`;",
+                  "pm.collectionVariables.set('user_email', email);",
+                  "pm.collectionVariables.set('user_password', 'SecurePass123!');",
+                  "console.log('📧 Email généré :', email);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Jean Hugues Bengono\",\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "register"]
+            },
+            "description": "Créer un nouveau compte utilisateur.\n\n**Route non sécurisée** — aucun token requis.\n\nLe script de test sauvegarde automatiquement le `accessToken` dans les variables de collection."
+          },
+          "response": [
+            {
+              "name": "201 — Compte créé avec succès",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Jean Hugues Bengono\",\n    \"email\": \"jean.hugues@afric.cm\",\n    \"password\": \"SecurePass123!\"\n}"
+                },
+                "url": {"raw": "{{base_url}}/api/register"}
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6ImplYW4uaHVndWVzQGFmcmljLmNtIiwidHlwZSI6IkFDQ0VTUyIsInN1YiI6IjY2NWFiYzEyM2RlZjQ1Njc4OSIsImlhdCI6MTcxNzkyODAwMCwiZXhwIjoxNzE4MDE0NDAwfQ.signature\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9.refreshtoken.signature\",\n    \"tokenType\": \"Bearer\",\n    \"expiresIn\": 86400,\n    \"user\": {\n        \"id\": \"665abc123def456789\",\n        \"name\": \"Jean Hugues Bengono\",\n        \"email\": \"jean.hugues@afric.cm\",\n        \"createdAt\": \"2024-06-09T10:00:00Z\"\n    }\n}"
+            },
+            {
+              "name": "409 — Email déjà utilisé",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Doublon\",\n    \"email\": \"jean.hugues@afric.cm\",\n    \"password\": \"SecurePass123!\"\n}"
+                },
+                "url": {"raw": "{{base_url}}/api/register"}
+              },
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n    \"error\": \"Un compte existe déjà avec l'adresse : jean.hugues@afric.cm\",\n    \"status\": 409,\n    \"timestamp\": \"2024-06-09T10:01:00Z\"\n}"
+            },
+            {
+              "name": "400 — Validation échouée",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"\",\n    \"email\": \"not-an-email\",\n    \"password\": \"short\"\n}"
+                },
+                "url": {"raw": "{{base_url}}/api/register"}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n    \"error\": \"Données invalides\",\n    \"fields\": {\n        \"name\": \"Le nom est obligatoire\",\n        \"email\": \"Format d'email invalide\",\n        \"password\": \"Le mot de passe doit contenir au moins 8 caractères\"\n    },\n    \"status\": 400,\n    \"timestamp\": \"2024-06-09T10:01:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login — Se connecter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contient les tokens', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(json.tokenType).to.equal('Bearer');",
+                  "});",
+                  "",
+                  "pm.test('Token type est Bearer', function () {",
+                  "    pm.expect(pm.response.json().tokenType).to.equal('Bearer');",
+                  "});",
+                  "",
+                  "// ─── Mise à jour du token ─────────────────────────────────",
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', json.accessToken);",
+                  "    pm.collectionVariables.set('refresh_token', json.refreshToken);",
+                  "    console.log('🔑 Token rafraîchi avec succès');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "login"]
+            },
+            "description": "Authentifier un utilisateur existant.\n\n**Route non sécurisée** — aucun token requis.\n\nRetourne un nouveau `accessToken` et `refreshToken`."
+          },
+          "response": [
+            {
+              "name": "200 — Connexion réussie",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiJ9...\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9...\",\n    \"tokenType\": \"Bearer\",\n    \"expiresIn\": 86400,\n    \"user\": {\n        \"id\": \"665abc123def456789\",\n        \"name\": \"Jean Hugues Bengono\",\n        \"email\": \"jean.hugues@afric.cm\",\n        \"createdAt\": \"2024-06-09T10:00:00Z\"\n    }\n}"
+            },
+            {
+              "name": "401 — Identifiants incorrects",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n    \"error\": \"Identifiants incorrects\",\n    \"status\": 401,\n    \"timestamp\": \"2024-06-09T10:05:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User — Profil utilisateur connecté",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Profil retourné sans mot de passe', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('name');",
+                  "    pm.expect(json).to.have.property('email');",
+                  "    pm.expect(json).to.not.have.property('password');",
+                  "});",
+                  "",
+                  "pm.test('Email correspond à l\\'utilisateur connecté', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.equal(pm.collectionVariables.get('user_email'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "description": "JWT Access Token"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user"]
+            },
+            "description": "Récupérer le profil de l'utilisateur actuellement connecté.\n\n**Route sécurisée** — `Authorization: Bearer <token>` obligatoire.\n\nLe Gateway valide le token et propage l'identité au service."
+          },
+          "response": [
+            {
+              "name": "200 — Profil utilisateur",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"id\": \"665abc123def456789\",\n    \"name\": \"Jean Hugues Bengono\",\n    \"email\": \"jean.hugues@afric.cm\",\n    \"createdAt\": \"2024-06-09T10:00:00Z\"\n}"
+            },
+            {
+              "name": "401 — Token manquant",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n    \"error\": \"Non autorisé\",\n    \"message\": \"Token manquant ou invalide\",\n    \"status\": 401\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "💰 Accounting Service",
+      "description": "Endpoints de gestion des comptes — routes SÉCURISÉES (Bearer token requis)",
+      "item": [
+        {
+          "name": "Get Account — Solde du compte",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Compte contient les champs requis', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('accountNumber');",
+                  "    pm.expect(json).to.have.property('balance');",
+                  "    pm.expect(json).to.have.property('currency');",
+                  "});",
+                  "",
+                  "pm.test('Devise est XAF', function () {",
+                  "    pm.expect(pm.response.json().currency).to.equal('XAF');",
+                  "});",
+                  "",
+                  "pm.test('Numéro de compte commence par AF', function () {",
+                  "    pm.expect(pm.response.json().accountNumber).to.match(/^AF/);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/account",
+              "host": ["{{base_url}}"],
+              "path": ["api", "account"]
+            },
+            "description": "Récupère le compte bancaire de l'utilisateur connecté.\nSi aucun compte n'existe, il est créé automatiquement (solde = 0 XAF)."
+          },
+          "response": [
+            {
+              "name": "200 — Compte bancaire",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"id\": \"665def789ghi012345\",\n    \"userId\": \"665abc123def456789\",\n    \"accountNumber\": \"AFBC3F7E2A1D\",\n    \"balance\": 0.0,\n    \"currency\": \"XAF\",\n    \"createdAt\": \"2024-06-09T10:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Credit — Créditer le compte",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Journal comptable créé', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('journalId');",
+                  "    pm.expect(json).to.have.property('accountId');",
+                  "    pm.expect(json).to.have.property('direction', 'CREDIT');",
+                  "    pm.expect(json).to.have.property('balanceBefore');",
+                  "    pm.expect(json).to.have.property('balanceAfter');",
+                  "});",
+                  "",
+                  "pm.test('balanceAfter = balanceBefore + amount', function () {",
+                  "    const json = pm.response.json();",
+                  "    const requestBody = JSON.parse(pm.request.body.raw);",
+                  "    const expectedAfter = json.balanceBefore + requestBody.amount;",
+                  "    pm.expect(json.balanceAfter).to.be.closeTo(expectedAfter, 0.01);",
+                  "});",
+                  "",
+                  "pm.test('Direction est CREDIT', function () {",
+                  "    pm.expect(pm.response.json().direction).to.equal('CREDIT');",
+                  "});",
+                  "",
+                  "// Sauvegarder le solde pour le test suivant",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('last_balance', pm.response.json().balanceAfter);",
+                  "    console.log('💰 Nouveau solde :', pm.response.json().balanceAfter, 'XAF');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 100000.00,\n    \"description\": \"Dépôt initial XAF\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/account/credit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "account", "credit"]
+            },
+            "description": "Crédite le compte de l'utilisateur connecté.\n\n**Route sécurisée** — Bearer token obligatoire.\n\nÉcrit atomiquement dans `account` ET `accounting_journal` via `@Transactional` + MongoDB Replica Set."
+          },
+          "response": [
+            {
+              "name": "200 — Crédit effectué",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"journalId\": \"665jkl321mno654987\",\n    \"accountId\": \"665def789ghi012345\",\n    \"direction\": \"CREDIT\",\n    \"amount\": 100000.0,\n    \"balanceBefore\": 0.0,\n    \"balanceAfter\": 100000.0,\n    \"createdAt\": \"2024-06-09T10:10:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Debit — Débiter le compte",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Journal comptable créé', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('journalId');",
+                  "    pm.expect(json).to.have.property('direction', 'DEBIT');",
+                  "    pm.expect(json).to.have.property('balanceBefore');",
+                  "    pm.expect(json).to.have.property('balanceAfter');",
+                  "});",
+                  "",
+                  "pm.test('balanceAfter = balanceBefore - amount', function () {",
+                  "    const json = pm.response.json();",
+                  "    const requestBody = JSON.parse(pm.request.body.raw);",
+                  "    const expectedAfter = json.balanceBefore - requestBody.amount;",
+                  "    pm.expect(json.balanceAfter).to.be.closeTo(expectedAfter, 0.01);",
+                  "});",
+                  "",
+                  "pm.test('Solde ne peut pas être négatif', function () {",
+                  "    pm.expect(pm.response.json().balanceAfter).to.be.at.least(0);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    console.log('💸 Débit effectué. Nouveau solde :', pm.response.json().balanceAfter, 'XAF');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 35000.00,\n    \"description\": \"Retrait guichet\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/account/debit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "account", "debit"]
+            },
+            "description": "Débite le compte de l'utilisateur connecté.\n\n**Route sécurisée** — Bearer token obligatoire.\n\nVérifie la provision avant toute opération. Retourne `422` si solde insuffisant.\n\nÉcrit atomiquement dans `account` ET `accounting_journal` via `@Transactional`."
+          },
+          "response": [
+            {
+              "name": "200 — Débit effectué",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"journalId\": \"665pqr456stu789012\",\n    \"accountId\": \"665def789ghi012345\",\n    \"direction\": \"DEBIT\",\n    \"amount\": 35000.0,\n    \"balanceBefore\": 100000.0,\n    \"balanceAfter\": 65000.0,\n    \"createdAt\": \"2024-06-09T10:15:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Debit — ❌ Solde insuffisant (cas d'erreur)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422 Unprocessable Entity', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('Message d\\'erreur métier précis', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('error');",
+                  "    pm.expect(json.error).to.include('Solde insuffisant');",
+                  "    pm.expect(json).to.have.property('status', 422);",
+                  "});",
+                  "",
+                  "console.log('✅ Test solde insuffisant : comportement correct (422)');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 999999999.00,\n    \"description\": \"Tentative de débit impossible\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/account/debit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "account", "debit"]
+            },
+            "description": "Test du cas d'erreur : solde insuffisant.\n\nDoit retourner `422 Unprocessable Entity` avec un message métier précis indiquant le solde disponible et le montant demandé."
+          },
+          "response": [
+            {
+              "name": "422 — Solde insuffisant",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "body": "{\n    \"error\": \"Solde insuffisant. Solde disponible : 65000,00 XAF, montant demandé : 999999999,00 XAF\",\n    \"status\": 422,\n    \"timestamp\": \"2024-06-09T10:20:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Tests de sécurité",
+      "description": "Vérification des protections — tokens invalides, expirés, manquants",
+      "item": [
+        {
+          "name": "Get User sans token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Message d\\'erreur présent', function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('error');",
+                  "});",
+                  "",
+                  "console.log('✅ Protection route sécurisée : OK');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user"]
+            },
+            "description": "Vérifie que la route `/api/user` est bien protégée sans token."
+          }
+        },
+        {
+          "name": "Credit avec token invalide → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "console.log('✅ Token invalide correctement rejeté');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer token.invalide.ici"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 1000.00\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/account/credit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "account", "credit"]
+            },
+            "description": "Vérifie que le Gateway rejette correctement un token JWT malformé."
+          }
+        },
+        {
+          "name": "Debit montant négatif → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Erreur de validation sur amount', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('fields');",
+                  "    pm.expect(json.fields).to.have.property('amount');",
+                  "});",
+                  "console.log('✅ Validation Bean Validation : OK');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": -500.00,\n    \"description\": \"Montant négatif invalide\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/account/debit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "account", "debit"]
+            },
+            "description": "Vérifie la validation Bean Validation — le montant doit être > 0."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏥 Health Checks",
+      "description": "Vérification de la santé de toute l'infrastructure",
+      "item": [
+        {
+          "name": "Gateway Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Status UP', () => pm.expect(pm.response.json().status).to.equal('UP'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "Eureka Dashboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8761",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8761"
+            },
+            "description": "Dashboard Eureka — liste tous les services enregistrés."
+          }
+        },
+        {
+          "name": "Config Server Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Config Server UP', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8888/actuator/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8888",
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "Auth Service Config (via Config Server)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8888/auth-service/default",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8888",
+              "path": ["auth-service", "default"]
+            },
+            "description": "Vérifie que la configuration du auth-service est bien distribuée par le Config Server."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+server:
+  port: 8082
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb://mongo-router:27017/afric_banking?replicaSet=rs0
+      database: afric_banking
+  application:
+    name: accounting-service
+
+jwt:
+  secret: ${JWT_SECRET:aWdvcnBheS1zdXBlci1zZWNyZXQta2V5LWNoYW5nZS10aGlzLWluLXByb2R1Y3Rpb24tbWluLTI1Ni1iaXRzLXJlcXVpcmVk}
+
+logging:
+  level:
+    com.afric: DEBUG

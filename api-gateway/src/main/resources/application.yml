@@ -1,0 +1,68 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # ─── AUTH SERVICE ────────────────────────────────────────────────
+        - id: auth-service-public
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/register, /api/login
+          filters:
+            - name: JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+
+        - id: auth-service-secured
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/user
+          filters:
+            - name: JwtAuthFilter
+
+        # ─── ACCOUNTING SERVICE ──────────────────────────────────────────
+        - id: accounting-service
+          uri: lb://accounting-service
+          predicates:
+            - Path=/api/account/**
+          filters:
+            - name: JwtAuthFilter
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "*"
+            allowed-methods: "*"
+            allowed-headers: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: ${JWT_SECRET:aWdvcnBheS1zdXBlci1zZWNyZXQta2V5LWNoYW5nZS10aGlzLWluLXByb2R1Y3Rpb24tbWluLTI1Ni1iaXRzLXJlcXVpcmVk}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    gateway:
+      enabled: true

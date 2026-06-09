@@ -1,0 +1,20 @@
+server:
+  port: 8081
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb://mongo-router:27017/afric_banking?replicaSet=rs0
+      database: afric_banking
+  application:
+    name: auth-service
+
+jwt:
+  secret: ${JWT_SECRET:aWdvcnBheS1zdXBlci1zZWNyZXQta2V5LWNoYW5nZS10aGlzLWluLXByb2R1Y3Rpb24tbWluLTI1Ni1iaXRzLXJlcXVpcmVk}
+  expiration: 86400000   # 24h en ms
+  refresh-expiration: 604800000  # 7j en ms
+
+logging:
+  level:
+    com.afric: DEBUG
+    org.springframework.security: INFO

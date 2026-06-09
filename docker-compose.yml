@@ -1,20 +1,5 @@
 version: "3.9"
 
-# =============================================================================
-#  Afric Banking Platform — Docker Compose
-#
-#  Ordre de démarrage :
-#    1. mongo1, mongo2, mongo3   (Replica Set MongoDB)
-#    2. mongo-init               (Init RS + index)
-#    3. eureka-server            (Service Registry)
-#    4. config-server            (Config centralisé)
-#    5. auth-service             (Authentification)
-#    6. accounting-service       (Comptabilité)
-#    7. api-gateway              (Proxy + JWT)
-#
-#  Accès externe unique : http://localhost:8080
-# =============================================================================
-
 networks:
   afric-net:
     driver: bridge
@@ -28,8 +13,6 @@ volumes:
   mongo3-data:
 
 services:
-
-  # ─── MONGODB REPLICA SET ───────────────────────────────────────────────────
 
   mongo1:
     image: mongo:7.0
@@ -88,8 +71,6 @@ services:
       retries: 10
       start_period: 20s
 
-  # ─── INITIALISATION REPLICA SET ───────────────────────────────────────────
-
   mongo-init:
     image: mongo:7.0
     container_name: mongo-init
@@ -106,8 +87,6 @@ services:
       - ./mongo-init/init-replica.sh:/init-replica.sh:ro
     entrypoint: ["bash", "/init-replica.sh"]
     restart: "no"
-
-  # ─── SPRING CLOUD INFRASTRUCTURE ──────────────────────────────────────────
 
   eureka-server:
     build:
@@ -141,7 +120,8 @@ services:
     ports:
       - "8888:8888"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=native
+      - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/app/configs/
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
     depends_on:
       eureka-server:
@@ -152,8 +132,6 @@ services:
       timeout: 10s
       retries: 8
       start_period: 40s
-
-  # ─── MICROSERVICES APPLICATIFS ─────────────────────────────────────────────
 
   auth-service:
     build:
@@ -170,7 +148,6 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
     depends_on:
       config-server:
         condition: service_healthy
@@ -198,7 +175,6 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
     depends_on:
       config-server:
         condition: service_healthy
@@ -210,8 +186,6 @@ services:
       timeout: 10s
       retries: 8
       start_period: 60s
-
-  # ─── API GATEWAY (point d'entrée unique) ──────────────────────────────────
 
   api-gateway:
     build:

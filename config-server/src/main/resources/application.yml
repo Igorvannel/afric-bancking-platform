@@ -11,19 +11,17 @@ spring:
       server:
         native:
           search-locations: classpath:/configs/
+      override-none: true
 
 eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka/
-  instance:
-    prefer-ip-address: true
+    register-with-eureka: true
+    fetch-registry: true
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,refresh
-  endpoint:
-    health:
-      show-details: always
